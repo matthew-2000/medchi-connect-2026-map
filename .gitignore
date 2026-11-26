@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.data-app-*/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+*.xlsx
+*.xls
+*.csv
+work/
+private/
