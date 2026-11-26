@@ -17,10 +17,11 @@ function fitSites(sites,padding=1.5){
  const left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys),w=Math.max(10,(right-left)*padding),h=Math.max(8,(bottom-top)*padding);
  return [(left+right-w)/2,(top+bottom-h)/2,w,h];
 }
-function mapBox([x,y,w,h], {width,height}, thematic, compact, panel) {
- const left=thematic?(compact?22:Math.max(272,(panel?.right??0)+16)):0, right=thematic?48:0;
- const bottom=thematic?Math.min(100,height*.17):0;
- const top=thematic?(compact?Math.min(Math.max(122,(panel?.bottom??0)+24),Math.max(0,height-bottom-100)):40):0;
+function mapBox([x,y,w,h], {width,height}, thematic, compact, overview, layout) {
+ const left=thematic?(overview||compact?22:Math.max(272,(layout?.panel.right??0)+16)):0, right=thematic?48:0;
+ const bottom=thematic?(overview?Math.min(layout?.bottomInset??128,height*.36):Math.min(100,height*.17)):0;
+ const top=thematic?(overview?Math.min(layout?.topInset??116,height*.42):
+  compact?Math.min(Math.max(122,(layout?.panel.bottom??0)+24),Math.max(0,height-bottom-100)):40):0;
  const usableWidth=Math.max(1,width-left-right), usableHeight=Math.max(1,height-top-bottom);
  const unit=Math.max(w/usableWidth,h/usableHeight);
  return [x+w/2-(left+usableWidth/2)*unit,y+h/2-(top+usableHeight/2)*unit,width*unit,height*unit];
@@ -40,6 +41,7 @@ function LocationPopup({sites,onClose}){
 function PresentationMap({rows,country,setCountry,countries,anchors,layer,setLayer,theme,setTheme}){
  const sites=useMemo(()=>siteRows(rows),[rows]);
  const thematic=layer==='themes';
+ const overview=thematic&&theme==='all';
  const network=useMemo(()=>thematicNetwork(rows,theme,anchors),[rows,theme,anchors]);
  const fitTheme=(nodes,id=theme)=>fitSites(nodes.length?nodes:sites,id==='all'?1.2:1.5);
  const [camera,setCamera]=useState(()=>thematic?fitTheme(network.nodes):country==='all'?presets.med:fitSites(sites));
@@ -52,27 +54,38 @@ function PresentationMap({rows,country,setCountry,countries,anchors,layer,setLay
  useEffect(()=>{const update=()=>setFullscreen(Boolean(document.fullscreenElement));document.addEventListener('fullscreenchange',update);return()=>document.removeEventListener('fullscreenchange',update);},[]);
  useEffect(()=>{const node=svg.current;if(!node)return;const wheel=e=>{e.preventDefault();const factor=Math.exp(Math.max(-.18,Math.min(.18,e.deltaY*.001)));setCamera(([x,y,w,h])=>{const width=Math.max(3,Math.min(350,w*factor)),height=h*width/w;return[x+(w-width)/2,y+(h-height)/2,width,height];});setView('custom');};node.addEventListener('wheel',wheel,{passive:false});return()=>node.removeEventListener('wheel',wheel);},[]);
  useLayoutEffect(()=>{
-  const panel=themePanel.current;
-  if(!thematic||!panel)return;
+  const overlay=themePanel.current,mapNode=svg.current;
+  if(!thematic||!overlay||!mapNode)return;
+  const panel=overlay.querySelector('.thematic-control');
+  const topBand=overlay.querySelector('[data-theme-band="top"]');
+  const bottomBand=overlay.querySelector('[data-theme-band="bottom"]');
+  const nodes=[...overlay.querySelectorAll('[data-theme-origin]')];
   const measure=()=>{
-   const mapRect=svg.current.getBoundingClientRect();
-   const rect=panel.getBoundingClientRect();
-   const left=rect.left-mapRect.left,top=rect.top-mapRect.top,right=left+rect.width,bottom=top+rect.height;
-   const legend=panel.querySelectorAll('[data-theme-origin]');
-   const origins=Object.fromEntries([...legend].map((button,index)=>{
-    const y=button.getBoundingClientRect().top-mapRect.top+button.offsetHeight/2;
-    const x=left+rect.width*(index+1)/(legend.length+1);
-    return [button.dataset.themeOrigin,compact?[x,bottom]:[right,y]];
+   const mapRect=mapNode.getBoundingClientRect();
+   const relativeRect=element=>{
+    const {left,right,top,bottom}=element.getBoundingClientRect();
+    return {left:left-mapRect.left,right:right-mapRect.left,top:top-mapRect.top,bottom:bottom-mapRect.top};
+   };
+   const panelRect=relativeRect(panel);
+   const obstacles=[panelRect];
+   const origins=Object.fromEntries(nodes.map(button=>{
+    const rect=relativeRect(button);
+    obstacles.push(rect);
+    const y=button.closest('[data-theme-band]').dataset.themeBand==='top'?rect.bottom:rect.top;
+    return [button.dataset.themeOrigin,[(rect.left+rect.right)/2,y]];
    }));
-   if(theme!=='all')origins[theme]=compact?[(left+right)/2,bottom]:[right,(top+bottom)/2];
-   setThemeLayout({left,top,right,bottom,origins});
+   const {left,right,top,bottom}=panelRect;
+   if(!overview)origins[theme]=compact?[(left+right)/2,bottom]:[right,(top+bottom)/2];
+   const topInset=(topBand?relativeRect(topBand).bottom:bottom)+20;
+   const bottomInset=bottomBand?mapRect.height-relativeRect(bottomBand).top+20:90;
+   setThemeLayout({panel:panelRect,origins,obstacles,topInset,bottomInset});
   };
   measure();
   const observer=new ResizeObserver(measure);
-  observer.observe(panel);
+  for(const element of [mapNode,panel,topBand,bottomBand].filter(Boolean))observer.observe(element);
   return()=>observer.disconnect();
- },[thematic,compact,theme,network.themeIds]);
- const box=useMemo(()=>mapBox(camera,size,thematic,compact,themeLayout),[camera,size,thematic,compact,themeLayout]);
+ },[thematic,compact,overview,theme,network.themeIds]);
+ const box=useMemo(()=>mapBox(camera,size,thematic,compact,overview,themeLayout),[camera,size,thematic,compact,overview,themeLayout]);
  const unit=box[2]/size.width;
  const groups=useMemo(()=>{
   const exact=new Map();for(const site of sites){const key=site.longitude+','+site.latitude;if(!exact.has(key))exact.set(key,[]);exact.get(key).push(site);}
@@ -88,13 +101,18 @@ function PresentationMap({rows,country,setCountry,countries,anchors,layer,setLay
   const [x,y]=project([node.longitude,node.latitude]);
   const px=(x-box[0])/unit,py=(y-box[1])/unit;
   if(px<14||px>size.width-14||py<14||py>size.height-14)return [];
-  if(themeLayout&&px>themeLayout.left-15&&px<themeLayout.right+15&&py>themeLayout.top-15&&py<themeLayout.bottom+15)return [];
+  if(themeLayout?.obstacles.some(({left,right,top,bottom})=>px>left-15&&px<right+15&&py>top-15&&py<bottom+15))return [];
   return [{...node,x,y,px,py}];
  }):[];
  const visibleThemePoints=themePoints.map(point=>{
   const reach=point.country.length*6.8+24;
-  const rightObstructed=themePoints.some(other=>other.px>point.px&&other.px-point.px<reach&&Math.abs(other.py-point.py)<18);
-  const labelSide=point.px+reach>size.width-8||(rightObstructed&&point.px>reach+8)?-1:1;
+  const obstructed=direction=>themePoints.some(other=>{
+   const distance=(other.px-point.px)*direction;
+   return distance>0&&distance<reach&&Math.abs(other.py-point.py)<20;
+  });
+  const rightBlocked=point.px+reach>size.width-8||obstructed(1);
+  const leftBlocked=point.px<reach+8||obstructed(-1);
+  const labelSide=rightBlocked?(leftBlocked?0:-1):1;
   return {...point,labelSide};
  });
  const outside=thematic?network.nodes.length-visibleThemePoints.length:sites.filter(s=>{const[x,y]=project([s.longitude,s.latitude]);return x<box[0]||x>box[0]+box[2]||y<box[1]||y>box[1]+box[3];}).length;
@@ -106,10 +124,12 @@ function PresentationMap({rows,country,setCountry,countries,anchors,layer,setLay
   setCamera(next==='themes'?fitTheme(network.nodes):country==='all'?presets.med:fitSites(sites));
  };
  const changeTheme=next=>{
+  const focusedNode=document.activeElement?.hasAttribute('data-theme-origin');
   setHighlightedTheme(null);
   setTheme(next);
   setView('world');
   setCamera(fitTheme(thematicNetwork(rows,next,anchors).nodes,next));
+  if(focusedNode)requestAnimationFrame(()=>themePanel.current?.querySelector('[aria-label="Research theme"]')?.focus());
  };
  const zoom=f=>{setCamera(([x,y,w,h])=>{const nw=Math.max(3,Math.min(350,w*f)),nh=h*nw/w;return[x+(w-nw)/2,y+(h-nh)/2,nw,nh];});setView('custom');};
  const reset=()=>{setLayer('affiliations');setTheme('ai');setHighlightedTheme(null);setCountry('all');setLinks(true);go('med');};
@@ -127,7 +147,7 @@ function PresentationMap({rows,country,setCountry,countries,anchors,layer,setLay
   <DataComponent id="geographic-atlas" queryId="author_papers" kind="custom" title={thematic?'Thematic network':'Author affiliations'} variant="plain" showHeading={false} showActions={false} headerControls={controls} className="presentation-evidence"
    sourceRows={thematic?network.rows:rows} displayRows={thematic?network.nodes.map(({links,...node})=>node):sites.map(({records,...s})=>s)}
    scopeFilters={{population:'Mapped public-programme contributions',country,...(thematic?{theme:themeLabels[theme]}:{})}} description={description}>
-   <div className={`presentation-canvas${thematic?' thematic-canvas':''}`}>
+   <div className={`presentation-canvas${thematic?' thematic-canvas':''}`} data-overview={overview}>
     <svg ref={svg} viewBox={box.join(' ')} aria-label={thematic?'MedCHI network of research themes and countries.':'MedCHI author affiliations map. Drag to pan and use the scroll wheel or zoom buttons.'} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={()=>drag.current=null}>
      <defs><pattern id="atlas-graticule" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#b8cbd3" strokeWidth=".035"/></pattern></defs>
      <rect x="-360" y="-360" width="720" height="720" fill="#e1edf1"/><rect x="-360" y="-360" width="720" height="720" fill="url(#atlas-graticule)"/>
@@ -145,7 +165,7 @@ function PresentationMap({rows,country,setCountry,countries,anchors,layer,setLay
      })}
     </svg>
     {thematic&&<ThemeControl panelRef={themePanel} theme={theme} onChange={changeTheme} network={network}
-      compact={compact} highlight={setHighlightedTheme}/>}
+      highlight={setHighlightedTheme}/>}
     <div className="map-zoom-tools"><button aria-label="Zoom in" onClick={()=>zoom(.7)}>+</button><button aria-label="Zoom out" onClick={()=>zoom(1.4)}>−</button></div>
     {outside>0&&<button className="map-outliers" onClick={()=>go('world')}>{outside} {thematic?(outside===1?'country':'countries'):(outside===1?'location':'locations')} outside view ↗</button>}
     {hover&&!selectedGroup&&<div className="map-hover-caption"><strong>{hover.city}</strong><span>{hover.names}</span></div>}

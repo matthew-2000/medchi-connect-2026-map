@@ -14,27 +14,38 @@ const colors = {
   design: '#527795',
 };
 
-export function ThemeControl({panelRef, theme, onChange, network, compact, highlight}) {
+function ThemeDock({ids, position, onChange, highlight}) {
+  if (!ids.length) return null;
+  return <ul className="thematic-dock" data-theme-band={position} aria-label="Research themes">
+    {ids.map(id => <li key={id}>
+      <button type="button" data-theme-origin={id} onClick={() => onChange(id)}
+        onPointerEnter={() => highlight(id)} onPointerLeave={() => highlight(null)}
+        onFocus={() => highlight(id)} onBlur={() => highlight(null)}>
+        <i style={{backgroundColor: colors[id]}} aria-hidden="true"/>{themes[id]}
+      </button>
+    </li>)}
+  </ul>;
+}
+
+export function ThemeControl({panelRef, theme, onChange, network, highlight}) {
   const overview = theme === 'all';
   const summaryPrefix = overview ? `${plural(network.themeIds.length, 'theme')} · ` : '';
   const summary = network.nodes.length
     ? `${summaryPrefix}${plural(network.count, 'contribution')} · ${network.nodes.length} ${network.nodes.length === 1 ? 'country' : 'countries'}`
     : 'No mapped contributions for this selection.';
-  return <section ref={panelRef} className="thematic-control" data-overview={overview} data-compact={compact}
+  const split = Math.ceil(network.themeIds.length / 2);
+  return <section ref={panelRef} className="thematic-overlay" data-overview={overview}
     aria-label="Thematic network" data-reviewed-rows="true">
-    <span className="thematic-control-label">Research theme</span>
-    <Dropdown label="Research theme" value={theme} choices={themeChoices} choiceLabels={themeLabels}
-      allLabel={themeLabels.all} onChange={onChange}/>
-    <p role="status">{summary}</p>
-    {overview && network.themeIds.length > 0 && <ul className="thematic-legend" aria-label="Themes shown">
-      {network.themeIds.map(id => <li key={id}>
-        <button type="button" data-theme-origin={id} onClick={() => onChange(id)}
-          onMouseEnter={() => highlight(id)} onMouseLeave={() => highlight(null)}
-          onFocus={() => highlight(id)} onBlur={() => highlight(null)}>
-          <i style={{backgroundColor: colors[id]}} aria-hidden="true"/>{themes[id]}
-        </button>
-      </li>)}
-    </ul>}
+    <div className="thematic-top">
+      <div className="thematic-control">
+        {!overview && <span className="thematic-control-label">Research theme</span>}
+        <Dropdown label="Research theme" value={theme} choices={themeChoices} choiceLabels={themeLabels}
+          allLabel={themeLabels.all} onChange={onChange}/>
+        <p role="status">{summary}</p>
+      </div>
+      {overview && <ThemeDock ids={network.themeIds.slice(0, split)} position="top" onChange={onChange} highlight={highlight}/>}
+    </div>
+    {overview && <ThemeDock ids={network.themeIds.slice(split)} position="bottom" onChange={onChange} highlight={highlight}/>}
   </section>;
 }
 
@@ -48,8 +59,9 @@ export function ThemeNetwork({points, origins, compact, unit, theme, highlighted
         const origin = origins[id];
         if (!origin) return null;
         const [startX, startY] = origin;
-        const bend = compact ? (startY + y) / 2 : (startX + x) / 2;
-        const curve = compact ? `C${startX},${bend} ${x},${bend}` : `C${bend},${startY} ${bend},${y}`;
+        const vertical = overview || compact;
+        const bend = vertical ? (startY + y) / 2 : (startX + x) / 2;
+        const curve = vertical ? `C${startX},${bend} ${x},${bend}` : `C${bend},${startY} ${bend},${y}`;
         return <path key={`${code}-${id}`} className="thematic-edge" data-country={code} data-theme={id}
           data-emphasis={highlighted ? (id === highlighted ? 'active' : 'muted') : undefined}
           style={overview ? {stroke: colors[id]} : undefined}
@@ -76,8 +88,9 @@ export function ThemeNetwork({points, origins, compact, unit, theme, highlighted
         <circle cx={x} cy={y} r={radius + 5 * unit} fill="transparent"/>
         <circle cx={x} cy={y} r={radius} className="thematic-node"/>
         <text x={x} y={y + 4 * unit} className="thematic-count" fontSize={11 * unit}>{count}</text>
-        <text x={x + labelSide * (radius + 6 * unit)} y={y + 4 * unit} fontSize={12 * unit}
-          className="thematic-country" strokeWidth={3 * unit} textAnchor={labelSide < 0 ? 'end' : 'start'}>{name}</text>
+        <text x={x + labelSide * (radius + 6 * unit)} y={labelSide === 0 ? y - radius - 4 * unit : y + 4 * unit}
+          fontSize={12 * unit} className="thematic-country" strokeWidth={3 * unit}
+          textAnchor={labelSide === 0 ? 'middle' : labelSide < 0 ? 'end' : 'start'}>{name}</text>
         <title>{label}</title>
       </g>;
     })}
