@@ -6,7 +6,7 @@
 4. Run `npm ci` once after cloning or dependency changes; run `npm run build` after edits. Verify affected interactions in a browser, including reset, filters and any modified popup or zoom behavior.
 5. Push the branch and open a pull request. Describe the user-visible behavior and verification. Review and merge before publishing the shared production map.
 
-GitHub is the shared source of truth. Sites is the public presentation. A GitHub push does **not** deploy to Sites automatically. The Sites owner publishes a reviewed revision using the existing project (see DEPLOYMENT.md). Repository collaborator access and Sites editor access are separate.
+GitHub is the shared source of truth. Every push or merge to `main` automatically builds and deploys the map to GitHub Pages. Pull requests run the build without publishing. Review and merge changes to publish them. The earlier Sites link remains a separate snapshot and is not updated by this workflow. Repository collaborator access and Sites editor access are separate.
 
 The root AGENTS.md governs the copied Data runtime. Routine map changes belong in `src/content/`, `src/theme.css` and `src/data.json`. Do not patch built output, disable the verifier, or modify the integrity manifest by hand. The current custom shell is an explicitly requested presentation change and therefore uses source builds.
 

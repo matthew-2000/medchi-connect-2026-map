@@ -1,4 +1,18 @@
-# Publish the reviewed map to Sites
+# Automatic publication with GitHub Pages
+
+Public map: https://matthew-2000.github.io/medchi-connect-2026-map/
+
+The `.github/workflows/build.yml` workflow installs the locked dependencies, verifies the protected runtime, builds the standalone map and publishes only `dist/` to Pages. It runs on pushes to `main`, pull requests, and manual dispatch. Pull requests build without deployment. A failed build prevents deployment. The repository Pages source must be set to **GitHub Actions**.
+
+To publish: push your branch, open a pull request, review it, then merge into `main`. Follow the workflow under the repository Actions tab. No deployment tokens, API keys or Excel files are required. The workflow uses GitHub's temporary token with Pages/OIDC permissions restricted to its deployment job.
+
+The map is a static presentation with its reviewed public data embedded in the built HTML. Local map navigation and filters work without a backend. Pages does not host the Data Worker's server APIs or shared editing/refresh features. No such APIs are required by the map presentation.
+
+To roll back, revert the affected change through a new commit on `main`; the workflow republishes that revision. Avoid editing generated HTML directly.
+
+## Earlier Sites publication (optional, manual)
+
+The existing Sites URL remains online as a separate snapshot. This workflow does not synchronize it. The following retained instructions apply only if the owner explicitly requests a Sites update.
 
 GitHub stores shared source. Sites hosts the public map. Continue using this existing Site:
 

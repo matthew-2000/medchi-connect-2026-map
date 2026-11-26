@@ -2,7 +2,8 @@
 
 A map-first, English presentation of author affiliations and co-authorship for MedCHI Connect 2026. Co-authorship is enabled on first load and after **Reset map**. The application top bar is intentionally hidden for this presentation.
 
-- Public map: https://medchi-connect-2026-map.m-ercolino.chatgpt.site
+- Public map (automatic deployment): https://matthew-2000.github.io/medchi-connect-2026-map/
+- Earlier Sites publication: https://medchi-connect-2026-map.m-ercolino.chatgpt.site
 - Collaboration: https://github.com/matthew-2000/medchi-connect-2026-map
 - Official programme: https://sites.google.com/unisa.it/medchi2026-connect/program/program
 
@@ -25,7 +26,7 @@ npm run build
 npx vite preview --host 127.0.0.1
 ```
 
-The build produces `dist/index.html`. The Sites production deployment additionally uses the Data plugin packaging and asset-upload workflow described in [DEPLOYMENT.md](DEPLOYMENT.md).
+The build produces `dist/index.html`. GitHub Actions builds this static page and deploys it to Pages after every push to `main`. Pull requests are built without being published. See [DEPLOYMENT.md](DEPLOYMENT.md) for the workflow and the earlier Sites publication.
 
 ## Work together in Codex
 
