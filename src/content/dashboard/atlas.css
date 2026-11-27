@@ -92,3 +92,9 @@
   .thematic-canvas .map-outliers { right: 16px; bottom: 100px; }
 }
 .thematic-canvas[data-overview="true"] .map-outliers { bottom: 58px; }
+.presentation-footnote .map-credit {
+  flex-basis: 100%;
+  color: #244e5e;
+  font-size: 11px;
+  font-weight: 600;
+}
