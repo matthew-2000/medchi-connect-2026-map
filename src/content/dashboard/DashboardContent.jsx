@@ -171,7 +171,11 @@ function PresentationMap({rows,country,setCountry,countries,anchors,layer,setLay
     {hover&&!selectedGroup&&<div className="map-hover-caption"><strong>{hover.city}</strong><span>{hover.names}</span></div>}
     {selectedGroup&&<LocationPopup key={selectedGroup[0].inst_id} sites={selectedGroup} onClose={()=>setSelected(null)}/>}
     <div className="map-signature"><strong>MedCHI Connect <span>2026</span></strong><span>{thematic?'Thematic network':'Author affiliations'}</span></div>
-    <div className="presentation-footnote"><span>{thematic?<><i className="legend-blue"/> {theme==='all'?'Distinct contributions per country':'Contributions per country'} · click a country to filter</>:<><i className="legend-blue"/> Authors · click clusters to zoom <i className="legend-gold"/> MedCHI · Fisciano</>}</span><span>{thematic?'Representative affiliations':'City-level locations'} · <a href="https://www.naturalearthdata.com/" target="_blank" rel="noreferrer">Natural Earth</a> · GeoNames / ROR · OSM · <a href="https://sites.google.com/unisa.it/medchi2026-connect/program/program" target="_blank" rel="noreferrer">Programme</a></span></div>
+    <div className="presentation-footnote">
+     <span>{thematic?<><i className="legend-blue"/> {theme==='all'?'Distinct contributions per country':'Contributions per country'} · click a country to filter</>:<><i className="legend-blue"/> Authors · click clusters to zoom <i className="legend-gold"/> MedCHI · Fisciano</>}</span>
+     <span>{thematic?'Representative affiliations':'City-level locations'} · <a href="https://www.naturalearthdata.com/" target="_blank" rel="noreferrer">Natural Earth</a> · GeoNames / ROR · OSM · <a href="https://sites.google.com/unisa.it/medchi2026-connect/program/program" target="_blank" rel="noreferrer">Programme</a></span>
+     <span className="map-credit">Map authors · LabGIS, University of Salerno</span>
+    </div>
     {fullscreenError&&<div className="presentation-message" role="status">{fullscreenError}<button onClick={()=>setFullscreenError('')} aria-label="Close notice">×</button></div>}
    </div>
   </DataComponent>
