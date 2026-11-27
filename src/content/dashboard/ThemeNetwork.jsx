@@ -29,10 +29,10 @@ function ThemeDock({ids, position, onChange, highlight}) {
 
 export function ThemeControl({panelRef, theme, onChange, network, highlight}) {
   const overview = theme === 'all';
-  const summaryPrefix = overview ? `${plural(network.themeIds.length, 'theme')} · ` : '';
-  const summary = network.nodes.length
-    ? `${summaryPrefix}${plural(network.count, 'contribution')} · ${network.nodes.length} ${network.nodes.length === 1 ? 'country' : 'countries'}`
-    : 'No mapped contributions for this selection.';
+  const countryCount = network.nodes.length;
+  const summary = countryCount === 0 ? 'No mapped contributions for this selection.' : overview
+    ? `${plural(network.themeIds.length, 'theme')} · ${plural(network.count, 'contribution')} · ${countryCount} ${countryCount === 1 ? 'country' : 'countries'}`
+    : null;
   const split = Math.ceil(network.themeIds.length / 2);
   return <section ref={panelRef} className="thematic-overlay" data-overview={overview}
     aria-label="Thematic network" data-reviewed-rows="true">
@@ -41,7 +41,7 @@ export function ThemeControl({panelRef, theme, onChange, network, highlight}) {
         {!overview && <span className="thematic-control-label">Research theme</span>}
         <Dropdown label="Research theme" value={theme} choices={themeChoices} choiceLabels={themeLabels}
           allLabel={themeLabels.all} onChange={onChange}/>
-        <p role="status">{summary}</p>
+        {summary && <p role="status">{summary}</p>}
       </div>
       {overview && <ThemeDock ids={network.themeIds.slice(0, split)} position="top" onChange={onChange} highlight={highlight}/>}
     </div>
